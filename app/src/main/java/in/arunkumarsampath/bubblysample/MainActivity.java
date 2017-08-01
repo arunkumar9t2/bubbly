@@ -9,10 +9,10 @@ import android.widget.RelativeLayout;
 
 import java.util.ArrayList;
 
-import in.arunkumarsampath.bubbly.base.BubbleMovementDelegate;
+import in.arunkumarsampath.bubbly.base.BubbleMovementManager;
 
 public class MainActivity extends AppCompatActivity {
-    private BubbleMovementDelegate bubbleMovementDelegate;
+    private BubbleMovementManager bubbleMovementManager;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -28,14 +28,14 @@ public class MainActivity extends AppCompatActivity {
         }};
 
         relativeLayout.post(() -> {
-            bubbleMovementDelegate = new BubbleMovementDelegate(getApplicationContext(), bubblies, new Rect(0, 0, relativeLayout.getWidth(), relativeLayout.getHeight()));
-            bubbleMovementDelegate.start();
+            bubbleMovementManager = new BubbleMovementManager(getApplicationContext(), bubblies, new Rect(0, 0, relativeLayout.getWidth(), relativeLayout.getHeight()));
+            bubbleMovementManager.start();
         });
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        bubbleMovementDelegate.stop();
+        bubbleMovementManager.stop();
     }
 }

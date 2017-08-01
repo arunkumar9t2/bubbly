@@ -26,8 +26,8 @@ import static in.arunkumarsampath.bubbly.base.MovementTracker.adjustVelocities;
 /**
  * Created by Arunkumar on 20/05/17.
  */
-public class BubbleMovementDelegate {
-    private static final String TAG = BubbleMovementDelegate.class.getSimpleName();
+public class BubbleMovementManager {
+    private static final String TAG = BubbleMovementManager.class.getSimpleName();
 
     private static final SpringForce DEFAULT_SPRING_FORCE = new SpringForce();
 
@@ -53,7 +53,7 @@ public class BubbleMovementDelegate {
     private FlingAnimation masterXFlingAnim;
     private FlingAnimation masterYFlingAnim;
 
-    public BubbleMovementDelegate(@NonNull Context context, @NonNull List<View> bubbles, @Nullable Rect bounds) {
+    public BubbleMovementManager(@NonNull Context context, @NonNull List<View> bubbles, @Nullable Rect bounds) {
         this.context = context;
 
         views.addAll(bubbles);
