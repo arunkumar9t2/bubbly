@@ -10,7 +10,6 @@ import android.support.animation.SpringForce;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.util.DisplayMetrics;
-import android.util.Log;
 import android.view.GestureDetector;
 import android.view.GestureDetector.SimpleOnGestureListener;
 import android.view.MotionEvent;
@@ -21,6 +20,8 @@ import java.util.LinkedList;
 import java.util.List;
 
 import in.arunkumarsampath.bubbly.util.Utils;
+
+import static in.arunkumarsampath.bubbly.base.MovementTracker.adjustVelocities;
 
 /**
  * Created by Arunkumar on 20/05/17.
@@ -202,18 +203,23 @@ public class BubbleMovementDelegate {
             if (adjustedVelocities == null) {
                 float[] down = new float[]{downEvent.getRawX(), downEvent.getRawY()};
                 float[] up = new float[]{upEvent.getRawX(), upEvent.getRawY()};
-                adjustedVelocities = MovementTracker.adjustVelocities(down, up, velocityX, velocityY);
+                adjustedVelocities = adjustVelocities(down, up, velocityX, velocityY);
             }
             cancel();
 
             adjustedVelocities = interpolateVelocities(upEvent, adjustedVelocities);
 
+            final int xMin = bounds.left;
+            final int xMax = bounds.width() - masterView.getWidth();
+            final float xStartValue = Math.max(xMin, Math.min(xMax, masterView.getTranslationX()));
+            final float xVelocity = adjustedVelocities[0];
+
             xFling = new FlingAnimation(masterView, DynamicAnimation.TRANSLATION_X)
-                    .setMinValue(bounds.left)
-                    .setMaxValue(bounds.width() - masterView.getWidth())
+                    .setMinValue(xMin)
+                    .setMaxValue(xMax)
                     .setFriction(FLING_FRICTION)
-                    .setStartValue(masterView.getTranslationX())
-                    .setStartVelocity(adjustedVelocities[0])
+                    .setStartValue(xStartValue)
+                    .setStartVelocity(xVelocity)
                     .addEndListener((dynamicAnimation, cancelled, value, velocity) -> {
                         if (!cancelled) {
                             stickToX(velocity);
@@ -224,12 +230,17 @@ public class BubbleMovementDelegate {
                         }
                     });
 
+            final int yMin = bounds.top;
+            final int yMax = bounds.height() - masterView.getHeight();
+            final float yStartValue = Math.max(yMin, Math.min(yMax, masterView.getTranslationY()));
+            final float yVelocity = adjustedVelocities[1];
+
             yFling = new FlingAnimation(masterView, DynamicAnimation.TRANSLATION_Y)
-                    .setMinValue(bounds.top)
-                    .setMaxValue(bounds.height() - masterView.getHeight())
+                    .setMinValue(yMin)
+                    .setMaxValue(yMax)
                     .setFriction(FLING_FRICTION)
-                    .setStartValue(masterView.getTranslationY())
-                    .setStartVelocity(adjustedVelocities[1])
+                    .setStartValue(yStartValue)
+                    .setStartVelocity(yVelocity)
                     .addEndListener((dynamicAnimation, cancelled, value, velocity) -> {
                         if (!cancelled) {
                             stickToY(velocity);
@@ -259,7 +270,7 @@ public class BubbleMovementDelegate {
             // Apply the same amount of ramp up to y velocity.
             final float yAfterRampUp = adjustedVelocities[1] + (adjustedVelocities[1] * xPercentageRampUp);
 
-            Log.d(TAG, String.format("Initial velocity %f %f, ramped up %f %f", adjustedVelocities[0], adjustedVelocities[1], xAfterRampUp, yAfterRampUp));
+            // Log.d(TAG, String.format("Initial velocity %f %f, ramped up %f %f", adjustedVelocities[0], adjustedVelocities[1], xAfterRampUp, yAfterRampUp));
 
             return new float[]{xAfterRampUp, yAfterRampUp};
         }
