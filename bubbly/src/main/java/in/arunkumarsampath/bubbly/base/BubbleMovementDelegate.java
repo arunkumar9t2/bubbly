@@ -214,15 +214,12 @@ public class BubbleMovementDelegate {
                     .setFriction(FLING_FRICTION)
                     .setStartValue(masterView.getTranslationX())
                     .setStartVelocity(adjustedVelocities[0])
-                    .addEndListener(new DynamicAnimation.OnAnimationEndListener() {
-                        @Override
-                        public void onAnimationEnd(DynamicAnimation dynamicAnimation, boolean cancelled, float value, float velocity) {
-                            if (!cancelled) {
-                                stickToX(velocity);
+                    .addEndListener((dynamicAnimation, cancelled, value, velocity) -> {
+                        if (!cancelled) {
+                            stickToX(velocity);
 
-                                if (yFling != null) {
-                                    //  yFling.cancel();
-                                }
+                            if (yFling != null) {
+                                //  yFling.cancel();
                             }
                         }
                     });
@@ -233,12 +230,9 @@ public class BubbleMovementDelegate {
                     .setFriction(FLING_FRICTION)
                     .setStartValue(masterView.getTranslationY())
                     .setStartVelocity(adjustedVelocities[1])
-                    .addEndListener(new DynamicAnimation.OnAnimationEndListener() {
-                        @Override
-                        public void onAnimationEnd(DynamicAnimation dynamicAnimation, boolean cancelled, float value, float velocity) {
-                            if (!cancelled) {
-                                stickToY(velocity);
-                            }
+                    .addEndListener((dynamicAnimation, cancelled, value, velocity) -> {
+                        if (!cancelled) {
+                            stickToY(velocity);
                         }
                     });
             xFling.start();

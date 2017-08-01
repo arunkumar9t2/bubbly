@@ -27,12 +27,9 @@ public class MainActivity extends AppCompatActivity {
             add(findViewById(R.id.circle));
         }};
 
-        relativeLayout.post(new Runnable() {
-            @Override
-            public void run() {
-                bubbleMovementDelegate = new BubbleMovementDelegate(getApplicationContext(), bubblies, new Rect(0, 0, relativeLayout.getWidth(), relativeLayout.getHeight()));
-                bubbleMovementDelegate.start();
-            }
+        relativeLayout.post(() -> {
+            bubbleMovementDelegate = new BubbleMovementDelegate(getApplicationContext(), bubblies, new Rect(0, 0, relativeLayout.getWidth(), relativeLayout.getHeight()));
+            bubbleMovementDelegate.start();
         });
     }
 
