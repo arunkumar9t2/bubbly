@@ -48,18 +48,23 @@ public class BubbleMovementDelegate {
 
     private MovementTracker movementTracker;
 
+    private SpringAnimation masterXStickyAnim;
+    private SpringAnimation masterYStickyAnim;
+    private FlingAnimation masterXFlingAnim;
+    private FlingAnimation masterYFlingAnim;
+
     public BubbleMovementDelegate(@NonNull Context context, @NonNull List<View> bubbles, @Nullable Rect bounds) {
         this.context = context;
 
         views.addAll(bubbles);
 
         springForce = DEFAULT_SPRING_FORCE;
+        springForce.setStiffness(SpringForce.STIFFNESS_VERY_LOW);
+        springForce.setDampingRatio(SpringForce.DAMPING_RATIO_HIGH_BOUNCY);
+
         final ViewConfiguration viewConfiguration = ViewConfiguration.get(context);
         touchSlop = viewConfiguration.getScaledTouchSlop();
         movementTracker = MovementTracker.obtain();
-
-        springForce.setStiffness(SpringForce.STIFFNESS_LOW);
-        springForce.setDampingRatio(SpringForce.DAMPING_RATIO_MEDIUM_BOUNCY);
 
         if (bounds == null) {
             initBounds();
@@ -83,39 +88,71 @@ public class BubbleMovementDelegate {
 
     public void stop() {
         context = null;
+        cancelAllAnim();
         masterView.setOnTouchListener(null);
         masterView = null;
         gestureDetector = null;
     }
 
     private void stickToX(final float startVelocity) {
-        final SpringAnimation animation = new SpringAnimation(masterView, DynamicAnimation.TRANSLATION_X)
+        cancelMasterXStickyAnim();
+        masterXStickyAnim = new SpringAnimation(masterView, DynamicAnimation.TRANSLATION_X)
                 .setStartVelocity(startVelocity)
                 .setStartValue(masterView.getTranslationX())
                 .setSpring(springForce);
 
         if (masterView.getTranslationX() > bounds.width() / 2) {
-            animation.animateToFinalPosition(bounds.width() - masterView.getWidth());
+            masterXStickyAnim.animateToFinalPosition(bounds.width() - masterView.getWidth());
         } else {
-            animation.animateToFinalPosition(0);
+            masterXStickyAnim.animateToFinalPosition(0);
         }
     }
 
     private void stickToY(final float startVelocity) {
-        final SpringAnimation animation = new SpringAnimation(masterView, DynamicAnimation.TRANSLATION_Y)
+        cancelMasterYStickyAnim();
+        masterYStickyAnim = new SpringAnimation(masterView, DynamicAnimation.TRANSLATION_Y)
                 .setStartVelocity(startVelocity)
                 .setStartValue(masterView.getTranslationY())
                 .setSpring(springForce);
 
         if (masterView.getTranslationY() < bounds.top) {
-            animation.animateToFinalPosition(bounds.top);
+            masterYStickyAnim.animateToFinalPosition(bounds.top);
         } else if (masterView.getTranslationY() > bounds.height()) {
-            animation.animateToFinalPosition(bounds.height() - masterView.getWidth());
+            masterYStickyAnim.animateToFinalPosition(bounds.height() - masterView.getWidth());
+        }
+    }
+
+
+    private void cancelAllAnim() {
+        cancelAllFlings();
+        cancelAllSticky();
+    }
+
+    private void cancelAllSticky() {
+        cancelMasterXStickyAnim();
+        cancelMasterYStickyAnim();
+    }
+
+    void cancelAllFlings() {
+        if (masterXFlingAnim != null)
+            masterXFlingAnim.cancel();
+        if (masterYFlingAnim != null)
+            masterYFlingAnim.cancel();
+    }
+
+    private void cancelMasterXStickyAnim() {
+        if (masterXStickyAnim != null) {
+            masterXStickyAnim.cancel();
+        }
+    }
+
+    private void cancelMasterYStickyAnim() {
+        if (masterYStickyAnim != null) {
+            masterYStickyAnim.cancel();
         }
     }
 
     private class TouchListener implements View.OnTouchListener {
-
         private float lastDownX, lastDownY;
         private float lastViewDownX, lastViewDownY;
         private boolean dragging;
@@ -139,6 +176,8 @@ public class BubbleMovementDelegate {
 
             switch (event.getActionMasked()) {
                 case MotionEvent.ACTION_DOWN:
+                    cancelAllAnim();
+
                     movementTracker.onDown();
 
                     dragging = false;
@@ -148,7 +187,6 @@ public class BubbleMovementDelegate {
 
                     lastViewDownX = v.getX();
                     lastViewDownY = v.getY();
-
                     break;
                 case MotionEvent.ACTION_MOVE:
                     movementTracker.addMovement(event);
@@ -184,10 +222,7 @@ public class BubbleMovementDelegate {
     }
 
     private class GestureDetectorListener extends SimpleOnGestureListener {
-        private FlingAnimation xFling;
-        private FlingAnimation yFling;
-
-        static final float FLING_FRICTION = 0.6f;
+        static final float FLING_FRICTION = 0.5f;
 
         private final int minimumFlingVelocity;
 
@@ -205,7 +240,7 @@ public class BubbleMovementDelegate {
                 float[] up = new float[]{upEvent.getRawX(), upEvent.getRawY()};
                 adjustedVelocities = adjustVelocities(down, up, velocityX, velocityY);
             }
-            cancel();
+            cancelAllAnim();
 
             adjustedVelocities = interpolateVelocities(upEvent, adjustedVelocities);
 
@@ -214,7 +249,7 @@ public class BubbleMovementDelegate {
             final float xStartValue = Math.max(xMin, Math.min(xMax, masterView.getTranslationX()));
             final float xVelocity = adjustedVelocities[0];
 
-            xFling = new FlingAnimation(masterView, DynamicAnimation.TRANSLATION_X)
+            masterXFlingAnim = new FlingAnimation(masterView, DynamicAnimation.TRANSLATION_X)
                     .setMinValue(xMin)
                     .setMaxValue(xMax)
                     .setFriction(FLING_FRICTION)
@@ -224,8 +259,8 @@ public class BubbleMovementDelegate {
                         if (!cancelled) {
                             stickToX(velocity);
 
-                            if (yFling != null) {
-                                //  yFling.cancel();
+                            if (masterYFlingAnim != null) {
+                                //  masterYFlingAnim.cancel();
                             }
                         }
                     });
@@ -235,7 +270,7 @@ public class BubbleMovementDelegate {
             final float yStartValue = Math.max(yMin, Math.min(yMax, masterView.getTranslationY()));
             final float yVelocity = adjustedVelocities[1];
 
-            yFling = new FlingAnimation(masterView, DynamicAnimation.TRANSLATION_Y)
+            masterYFlingAnim = new FlingAnimation(masterView, DynamicAnimation.TRANSLATION_Y)
                     .setMinValue(yMin)
                     .setMaxValue(yMax)
                     .setFriction(FLING_FRICTION)
@@ -246,8 +281,8 @@ public class BubbleMovementDelegate {
                             stickToY(velocity);
                         }
                     });
-            xFling.start();
-            yFling.start();
+            masterXFlingAnim.start();
+            masterYFlingAnim.start();
             wasFlung = true;
             return true;
         }
@@ -273,13 +308,6 @@ public class BubbleMovementDelegate {
             // Log.d(TAG, String.format("Initial velocity %f %f, ramped up %f %f", adjustedVelocities[0], adjustedVelocities[1], xAfterRampUp, yAfterRampUp));
 
             return new float[]{xAfterRampUp, yAfterRampUp};
-        }
-
-        void cancel() {
-            if (xFling != null)
-                xFling.cancel();
-            if (yFling != null)
-                yFling.cancel();
         }
     }
 }
