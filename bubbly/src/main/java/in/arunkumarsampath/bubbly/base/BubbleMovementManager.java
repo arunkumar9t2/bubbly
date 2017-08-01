@@ -29,17 +29,15 @@ import static in.arunkumarsampath.bubbly.base.MovementTracker.adjustVelocities;
 public class BubbleMovementManager {
     private static final String TAG = BubbleMovementManager.class.getSimpleName();
 
-    private static final SpringForce DEFAULT_SPRING_FORCE = new SpringForce();
-
-    private final List<View> views = new LinkedList<>();
-
     private Context context;
 
+    private static final SpringForce DEFAULT_SPRING_FORCE = new SpringForce();
     private SpringForce springForce;
     private GestureDetector gestureDetector;
 
-    private final int touchSlop;
+    private final List<View> views = new LinkedList<>();
 
+    private final int touchSlop;
     private Rect bounds;
 
     private View masterView;
@@ -83,7 +81,7 @@ public class BubbleMovementManager {
     }
 
     public void start() {
-        masterView.setOnTouchListener(new TouchListener(masterView));
+        masterView.setOnTouchListener(new TouchListener());
     }
 
     public void stop() {
@@ -156,16 +154,6 @@ public class BubbleMovementManager {
         private float lastDownX, lastDownY;
         private float lastViewDownX, lastViewDownY;
         private boolean dragging;
-
-        private SpringAnimation xAnimation;
-        private SpringAnimation yAnimation;
-
-        TouchListener(View view) {
-            xAnimation = new SpringAnimation(view, DynamicAnimation.TRANSLATION_X);
-            yAnimation = new SpringAnimation(view, DynamicAnimation.TRANSLATION_Y);
-            xAnimation.setSpring(springForce);
-            yAnimation.setSpring(springForce);
-        }
 
         @Override
         public boolean onTouch(View v, MotionEvent event) {
