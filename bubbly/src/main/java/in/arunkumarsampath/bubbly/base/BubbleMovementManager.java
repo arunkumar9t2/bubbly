@@ -35,6 +35,8 @@ public class BubbleMovementManager {
     private SpringForce springForce;
     private GestureDetector gestureDetector;
 
+    private static final float FLING_FRICTION = 0.5f;
+
     private final List<View> views = new LinkedList<>();
 
     private final int touchSlop;
@@ -130,6 +132,47 @@ public class BubbleMovementManager {
         }
     }
 
+    private void flingX(float startVelocity) {
+        final int xMin = bounds.left;
+        final int xMax = bounds.width() - masterView.getWidth();
+        final float xStartValue = Math.max(xMin, Math.min(xMax, masterView.getTranslationX()));
+
+        masterXFlingAnim = new FlingAnimation(new FloatValueHolder())
+                .setMinValue(xMin)
+                .setMaxValue(xMax)
+                .setFriction(FLING_FRICTION)
+                .setStartValue(xStartValue)
+                .setStartVelocity(startVelocity)
+                .addUpdateListener((animation, value, velocity) -> moveMasterX(value))
+                .addEndListener((dynamicAnimation, cancelled, value, velocity) -> {
+                    if (!cancelled) {
+                        stickToX(velocity);
+
+                        cancelYFling();
+                    }
+                });
+        masterXFlingAnim.start();
+    }
+
+    private void flingY(float startVelocity) {
+        final int yMin = bounds.top;
+        final int yMax = bounds.height() - masterView.getHeight();
+        final float yStartValue = Math.max(yMin, Math.min(yMax, masterView.getTranslationY()));
+
+        masterYFlingAnim = new FlingAnimation(new FloatValueHolder())
+                .setMinValue(yMin)
+                .setMaxValue(yMax)
+                .setFriction(FLING_FRICTION)
+                .setStartValue(yStartValue)
+                .setStartVelocity(startVelocity)
+                .addUpdateListener((animation, value, velocity) -> moveMasterY(value))
+                .addEndListener((dynamicAnimation, cancelled, value, velocity) -> {
+                    if (!cancelled) {
+                        stickToY(velocity);
+                    }
+                });
+        masterYFlingAnim.start();
+    }
 
     private void cancelAllAnim() {
         cancelAllFlings();
@@ -220,6 +263,7 @@ public class BubbleMovementManager {
 
                     dragging = false;
                     if (!wasFlung) {
+                        cancelAllAnim();
                         stickToX(0);
                         stickToY(0);
                     }
@@ -230,8 +274,6 @@ public class BubbleMovementManager {
     }
 
     private class GestureDetectorListener extends SimpleOnGestureListener {
-        static final float FLING_FRICTION = 0.5f;
-
         private final int minimumFlingVelocity;
 
         GestureDetectorListener() {
@@ -252,48 +294,13 @@ public class BubbleMovementManager {
 
             adjustedVelocities = interpolateVelocities(upEvent, adjustedVelocities);
 
-            final int xMin = bounds.left;
-            final int xMax = bounds.width() - masterView.getWidth();
-            final float xStartValue = Math.max(xMin, Math.min(xMax, masterView.getTranslationX()));
-            final float xVelocity = adjustedVelocities[0];
+            flingX(adjustedVelocities[0]);
+            flingY(adjustedVelocities[1]);
 
-            masterXFlingAnim = new FlingAnimation(new FloatValueHolder())
-                    .setMinValue(xMin)
-                    .setMaxValue(xMax)
-                    .setFriction(FLING_FRICTION)
-                    .setStartValue(xStartValue)
-                    .setStartVelocity(xVelocity)
-                    .addUpdateListener((animation, value, velocity) -> moveMasterX(value))
-                    .addEndListener((dynamicAnimation, cancelled, value, velocity) -> {
-                        if (!cancelled) {
-                            stickToX(velocity);
-
-                            cancelYFling();
-                        }
-                    });
-
-            final int yMin = bounds.top;
-            final int yMax = bounds.height() - masterView.getHeight();
-            final float yStartValue = Math.max(yMin, Math.min(yMax, masterView.getTranslationY()));
-            final float yVelocity = adjustedVelocities[1];
-
-            masterYFlingAnim = new FlingAnimation(new FloatValueHolder())
-                    .setMinValue(yMin)
-                    .setMaxValue(yMax)
-                    .setFriction(FLING_FRICTION)
-                    .setStartValue(yStartValue)
-                    .setStartVelocity(yVelocity)
-                    .addUpdateListener((animation, value, velocity) -> moveMasterY(value))
-                    .addEndListener((dynamicAnimation, cancelled, value, velocity) -> {
-                        if (!cancelled) {
-                            stickToY(velocity);
-                        }
-                    });
-            masterXFlingAnim.start();
-            masterYFlingAnim.start();
             wasFlung = true;
             return true;
         }
+
 
         private float[] interpolateVelocities(@NonNull MotionEvent upEvent, float[] adjustedVelocities) {
             final float xBeforeRampUp = adjustedVelocities[0];
