@@ -115,7 +115,7 @@ public class BubbleMovementManager implements BubbleMovement {
         if (masterView.getTranslationX() > bounds.width() / 2) {
             masterXStickyAnim.animateToFinalPosition(bounds.width() - masterView.getWidth());
         } else {
-            masterXStickyAnim.animateToFinalPosition(0);
+            masterXStickyAnim.animateToFinalPosition(bounds.left);
         }
     }
 
