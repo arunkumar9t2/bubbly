@@ -13,6 +13,7 @@ import android.util.DisplayMetrics;
 import android.view.GestureDetector;
 import android.view.GestureDetector.SimpleOnGestureListener;
 import android.view.MotionEvent;
+import android.view.VelocityTracker;
 import android.view.View;
 import android.view.ViewConfiguration;
 
@@ -47,6 +48,7 @@ public class BubbleMovementManager implements BubbleMovement {
     private boolean wasFlung;
 
     private MovementTracker movementTracker;
+    private VelocityTracker velocityTracker = null;
 
     private SpringAnimation masterXStickyAnim;
     private SpringAnimation masterYStickyAnim;
@@ -57,6 +59,7 @@ public class BubbleMovementManager implements BubbleMovement {
         this.context = context;
 
         views.addAll(bubbles);
+        masterView = bubbles.remove(0);
 
         springForce = DEFAULT_SPRING_FORCE;
         springForce.setStiffness(SpringForce.STIFFNESS_LOW);
@@ -73,8 +76,6 @@ public class BubbleMovementManager implements BubbleMovement {
         }
 
         gestureDetector = new GestureDetector(context.getApplicationContext(), new GestureDetectorListener());
-
-        masterView = bubbles.get(0);
     }
 
     private void initBounds() {
@@ -95,12 +96,12 @@ public class BubbleMovementManager implements BubbleMovement {
     }
 
     @Override
-    public void moveX(float x) {
+    public void moveX(float x, float velocity) {
         masterView.setTranslationX(x);
     }
 
     @Override
-    public void moveY(float y) {
+    public void moveY(float y, float velocity) {
         masterView.setTranslationY(y);
     }
 
@@ -110,7 +111,7 @@ public class BubbleMovementManager implements BubbleMovement {
                 .setSpring(springForce)
                 .setStartVelocity(startVelocity)
                 .setStartValue(masterView.getTranslationX())
-                .addUpdateListener((animation, value, velocity) -> moveX(value));
+                .addUpdateListener((animation, value, velocity) -> moveX(value, velocity));
 
         if (masterView.getTranslationX() > bounds.width() / 2) {
             masterXStickyAnim.animateToFinalPosition(bounds.width() - masterView.getWidth());
@@ -125,7 +126,7 @@ public class BubbleMovementManager implements BubbleMovement {
                 .setSpring(springForce)
                 .setStartVelocity(startVelocity)
                 .setStartValue(masterView.getTranslationY())
-                .addUpdateListener((animation, value, velocity) -> moveY(value));
+                .addUpdateListener((animation, value, velocity) -> moveY(value, velocity));
 
         if (masterView.getTranslationY() < bounds.top) {
             masterYStickyAnim.animateToFinalPosition(bounds.top);
@@ -145,7 +146,7 @@ public class BubbleMovementManager implements BubbleMovement {
                 .setFriction(FLING_FRICTION)
                 .setStartValue(xStartValue)
                 .setStartVelocity(startVelocity)
-                .addUpdateListener((animation, value, velocity) -> moveX(value))
+                .addUpdateListener((animation, value, velocity) -> moveX(value, value))
                 .addEndListener((dynamicAnimation, cancelled, value, velocity) -> {
                     if (!cancelled) {
                         stickToX(velocity);
@@ -167,7 +168,7 @@ public class BubbleMovementManager implements BubbleMovement {
                 .setFriction(FLING_FRICTION)
                 .setStartValue(yStartValue)
                 .setStartVelocity(startVelocity)
-                .addUpdateListener((animation, value, velocity) -> moveY(value))
+                .addUpdateListener((animation, value, velocity) -> moveY(value, velocity))
                 .addEndListener((dynamicAnimation, cancelled, value, velocity) -> {
                     if (!cancelled) {
                         stickToY(velocity);
@@ -233,6 +234,8 @@ public class BubbleMovementManager implements BubbleMovement {
 
                     movementTracker.onDown();
 
+                    initVelocityTracker();
+
                     dragging = false;
 
                     lastDownX = event.getRawX();
@@ -240,9 +243,14 @@ public class BubbleMovementManager implements BubbleMovement {
 
                     lastViewDownX = v.getX();
                     lastViewDownY = v.getY();
+
+                    velocityTracker.addMovement(event);
                     break;
                 case MotionEvent.ACTION_MOVE:
                     movementTracker.addMovement(event);
+
+                    velocityTracker.addMovement(event);
+                    velocityTracker.computeCurrentVelocity(1000);
 
                     float offsetX = event.getRawX() - lastDownX;
                     float offsetY = event.getRawY() - lastDownY;
@@ -255,8 +263,8 @@ public class BubbleMovementManager implements BubbleMovement {
                         float x = lastViewDownX + offsetX;
                         float y = lastViewDownY + offsetY;
 
-                        moveX(x);
-                        moveY(y);
+                        moveX(x, velocityTracker.getXVelocity());
+                        moveY(y, velocityTracker.getYVelocity());
                     }
                     break;
                 case MotionEvent.ACTION_UP:
@@ -272,6 +280,14 @@ public class BubbleMovementManager implements BubbleMovement {
                     break;
             }
             return true;
+        }
+    }
+
+    private void initVelocityTracker() {
+        if (velocityTracker == null) {
+            velocityTracker = VelocityTracker.obtain();
+        } else {
+            velocityTracker.clear();
         }
     }
 
