@@ -7,7 +7,6 @@ import java.util.Collection;
 import java.util.LinkedList;
 
 public class MovementTracker {
-    private static MovementTracker INSTANCE = new MovementTracker();
     private final SizedQueue<Float> xPoints;
     private final SizedQueue<Float> yPoints;
     private int trackingSize = 0;
@@ -20,7 +19,7 @@ public class MovementTracker {
 
     @NonNull
     static MovementTracker obtain() {
-        return INSTANCE;
+        return new MovementTracker();
     }
 
     static float[] adjustVelocities(float[] p1, float[] p2, float xVelocity, float yVelocity) {
