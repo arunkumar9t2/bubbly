@@ -26,7 +26,7 @@ import static in.arunkumarsampath.bubbly.base.MovementTracker.adjustVelocities;
 /**
  * Created by Arunkumar on 20/05/17.
  */
-public class BubbleMovementManager {
+public class BubbleMovementManager implements BubbleMovement {
     private static final String TAG = BubbleMovementManager.class.getSimpleName();
 
     private Context context;
@@ -94,11 +94,13 @@ public class BubbleMovementManager {
         gestureDetector = null;
     }
 
-    private void moveMasterX(float x) {
+    @Override
+    public void moveX(float x) {
         masterView.setTranslationX(x);
     }
 
-    private void moveMasterY(float y) {
+    @Override
+    public void moveY(float y) {
         masterView.setTranslationY(y);
     }
 
@@ -108,7 +110,7 @@ public class BubbleMovementManager {
                 .setSpring(springForce)
                 .setStartVelocity(startVelocity)
                 .setStartValue(masterView.getTranslationX())
-                .addUpdateListener((animation, value, velocity) -> moveMasterX(value));
+                .addUpdateListener((animation, value, velocity) -> moveX(value));
 
         if (masterView.getTranslationX() > bounds.width() / 2) {
             masterXStickyAnim.animateToFinalPosition(bounds.width() - masterView.getWidth());
@@ -123,7 +125,7 @@ public class BubbleMovementManager {
                 .setSpring(springForce)
                 .setStartVelocity(startVelocity)
                 .setStartValue(masterView.getTranslationY())
-                .addUpdateListener((animation, value, velocity) -> moveMasterY(value));
+                .addUpdateListener((animation, value, velocity) -> moveY(value));
 
         if (masterView.getTranslationY() < bounds.top) {
             masterYStickyAnim.animateToFinalPosition(bounds.top);
@@ -143,7 +145,7 @@ public class BubbleMovementManager {
                 .setFriction(FLING_FRICTION)
                 .setStartValue(xStartValue)
                 .setStartVelocity(startVelocity)
-                .addUpdateListener((animation, value, velocity) -> moveMasterX(value))
+                .addUpdateListener((animation, value, velocity) -> moveX(value))
                 .addEndListener((dynamicAnimation, cancelled, value, velocity) -> {
                     if (!cancelled) {
                         stickToX(velocity);
@@ -165,7 +167,7 @@ public class BubbleMovementManager {
                 .setFriction(FLING_FRICTION)
                 .setStartValue(yStartValue)
                 .setStartVelocity(startVelocity)
-                .addUpdateListener((animation, value, velocity) -> moveMasterY(value))
+                .addUpdateListener((animation, value, velocity) -> moveY(value))
                 .addEndListener((dynamicAnimation, cancelled, value, velocity) -> {
                     if (!cancelled) {
                         stickToY(velocity);
@@ -253,8 +255,8 @@ public class BubbleMovementManager {
                         float x = lastViewDownX + offsetX;
                         float y = lastViewDownY + offsetY;
 
-                        moveMasterX(x);
-                        moveMasterY(y);
+                        moveX(x);
+                        moveY(y);
                     }
                     break;
                 case MotionEvent.ACTION_UP:
