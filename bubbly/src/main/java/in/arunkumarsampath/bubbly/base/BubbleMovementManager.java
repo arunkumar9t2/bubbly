@@ -269,7 +269,6 @@ public class BubbleMovementManager implements BubbleMovement {
                     break;
                 case MotionEvent.ACTION_UP:
                 case MotionEvent.ACTION_CANCEL:
-                    velocityTracker.recycle();
                     movementTracker.onUp();
 
                     dragging = false;
