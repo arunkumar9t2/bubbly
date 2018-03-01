@@ -13,6 +13,7 @@ import android.util.DisplayMetrics;
 import android.view.GestureDetector;
 import android.view.GestureDetector.SimpleOnGestureListener;
 import android.view.MotionEvent;
+import android.view.VelocityTracker;
 import android.view.View;
 import android.view.ViewConfiguration;
 
@@ -26,7 +27,7 @@ import static in.arunkumarsampath.bubbly.base.MovementTracker.adjustVelocities;
 /**
  * Created by Arunkumar on 20/05/17.
  */
-public class BubbleMovementManager {
+public class BubbleMovementManager implements BubbleMovement {
     private static final String TAG = BubbleMovementManager.class.getSimpleName();
 
     private Context context;
@@ -47,6 +48,7 @@ public class BubbleMovementManager {
     private boolean wasFlung;
 
     private MovementTracker movementTracker;
+    private VelocityTracker velocityTracker = null;
 
     private SpringAnimation masterXStickyAnim;
     private SpringAnimation masterYStickyAnim;
@@ -57,6 +59,7 @@ public class BubbleMovementManager {
         this.context = context;
 
         views.addAll(bubbles);
+        masterView = bubbles.remove(0);
 
         springForce = DEFAULT_SPRING_FORCE;
         springForce.setStiffness(SpringForce.STIFFNESS_LOW);
@@ -73,8 +76,6 @@ public class BubbleMovementManager {
         }
 
         gestureDetector = new GestureDetector(context.getApplicationContext(), new GestureDetectorListener());
-
-        masterView = bubbles.get(0);
     }
 
     private void initBounds() {
@@ -94,11 +95,13 @@ public class BubbleMovementManager {
         gestureDetector = null;
     }
 
-    private void moveMasterX(float x) {
+    @Override
+    public void moveX(float x, float velocity) {
         masterView.setTranslationX(x);
     }
 
-    private void moveMasterY(float y) {
+    @Override
+    public void moveY(float y, float velocity) {
         masterView.setTranslationY(y);
     }
 
@@ -108,12 +111,12 @@ public class BubbleMovementManager {
                 .setSpring(springForce)
                 .setStartVelocity(startVelocity)
                 .setStartValue(masterView.getTranslationX())
-                .addUpdateListener((animation, value, velocity) -> moveMasterX(value));
+                .addUpdateListener((animation, value, velocity) -> moveX(value, velocity));
 
         if (masterView.getTranslationX() > bounds.width() / 2) {
             masterXStickyAnim.animateToFinalPosition(bounds.width() - masterView.getWidth());
         } else {
-            masterXStickyAnim.animateToFinalPosition(0);
+            masterXStickyAnim.animateToFinalPosition(bounds.left);
         }
     }
 
@@ -123,7 +126,7 @@ public class BubbleMovementManager {
                 .setSpring(springForce)
                 .setStartVelocity(startVelocity)
                 .setStartValue(masterView.getTranslationY())
-                .addUpdateListener((animation, value, velocity) -> moveMasterY(value));
+                .addUpdateListener((animation, value, velocity) -> moveY(value, velocity));
 
         if (masterView.getTranslationY() < bounds.top) {
             masterYStickyAnim.animateToFinalPosition(bounds.top);
@@ -143,7 +146,7 @@ public class BubbleMovementManager {
                 .setFriction(FLING_FRICTION)
                 .setStartValue(xStartValue)
                 .setStartVelocity(startVelocity)
-                .addUpdateListener((animation, value, velocity) -> moveMasterX(value))
+                .addUpdateListener((animation, value, velocity) -> moveX(value, value))
                 .addEndListener((dynamicAnimation, cancelled, value, velocity) -> {
                     if (!cancelled) {
                         stickToX(velocity);
@@ -165,7 +168,7 @@ public class BubbleMovementManager {
                 .setFriction(FLING_FRICTION)
                 .setStartValue(yStartValue)
                 .setStartVelocity(startVelocity)
-                .addUpdateListener((animation, value, velocity) -> moveMasterY(value))
+                .addUpdateListener((animation, value, velocity) -> moveY(value, velocity))
                 .addEndListener((dynamicAnimation, cancelled, value, velocity) -> {
                     if (!cancelled) {
                         stickToY(velocity);
@@ -231,6 +234,8 @@ public class BubbleMovementManager {
 
                     movementTracker.onDown();
 
+                    initVelocityTracker();
+
                     dragging = false;
 
                     lastDownX = event.getRawX();
@@ -238,9 +243,14 @@ public class BubbleMovementManager {
 
                     lastViewDownX = v.getX();
                     lastViewDownY = v.getY();
+
+                    velocityTracker.addMovement(event);
                     break;
                 case MotionEvent.ACTION_MOVE:
                     movementTracker.addMovement(event);
+
+                    velocityTracker.addMovement(event);
+                    velocityTracker.computeCurrentVelocity(1000);
 
                     float offsetX = event.getRawX() - lastDownX;
                     float offsetY = event.getRawY() - lastDownY;
@@ -253,8 +263,8 @@ public class BubbleMovementManager {
                         float x = lastViewDownX + offsetX;
                         float y = lastViewDownY + offsetY;
 
-                        moveMasterX(x);
-                        moveMasterY(y);
+                        moveX(x, velocityTracker.getXVelocity());
+                        moveY(y, velocityTracker.getYVelocity());
                     }
                     break;
                 case MotionEvent.ACTION_UP:
@@ -270,6 +280,14 @@ public class BubbleMovementManager {
                     break;
             }
             return true;
+        }
+    }
+
+    private void initVelocityTracker() {
+        if (velocityTracker == null) {
+            velocityTracker = VelocityTracker.obtain();
+        } else {
+            velocityTracker.clear();
         }
     }
 
